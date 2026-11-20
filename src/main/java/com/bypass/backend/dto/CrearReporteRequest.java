@@ -3,7 +3,7 @@ package com.bypass.backend.dto;
 import jakarta.validation.constraints.*;
 
 public record CrearReporteRequest(
-        @NotNull Long idUsuario,
+        @NotNull
         String idLinea,
         String idEstacion,
         String idTren,

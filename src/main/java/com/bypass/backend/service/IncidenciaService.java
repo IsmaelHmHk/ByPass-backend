@@ -6,6 +6,7 @@ import com.bypass.backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.util.HtmlUtils;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -28,15 +29,19 @@ public class IncidenciaService {
     private static final BigDecimal MIN_TRUST = BigDecimal.ZERO;
 
     @Transactional
-    public ReporteResponseDTO crearReporte(CrearReporteRequest req) {
-        Usuario autor = usuarioRepo.findById(req.idUsuario())
+    public ReporteResponseDTO crearReporte(Long idUsuario, CrearReporteRequest req) {
+        Usuario autor = usuarioRepo.findById(idUsuario)
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
 
         Linea linea = req.idLinea() != null ? lineaRepo.findById(req.idLinea()).orElse(null) : null;
         Estacion estacion = req.idEstacion() != null ? estacionRepo.findById(req.idEstacion()).orElse(null) : null;
         Tren tren = req.idTren() != null ? trenRepo.findById(req.idTren()).orElse(null) : null;
 
-        // Si el usuario tiene reputación alta (>= 3.50), el reporte se confirma automáticamente
+        // Sanitización XSS antes de persistir en base de datos
+        String descripcionSegura = req.descripcion() != null
+                ? HtmlUtils.htmlEscape(req.descripcion().trim())
+                : null;
+
         String estadoInicial = autor.getTrustScore().compareTo(new BigDecimal("3.50")) >= 0
                 ? "CONFIRMADO" : "PENDIENTE";
 
@@ -46,7 +51,7 @@ public class IncidenciaService {
                 .estacion(estacion)
                 .tren(tren)
                 .tipoIncidencia(req.tipoIncidencia())
-                .descripcion(req.descripcion())
+                .descripcion(descripcionSegura)
                 .pesoConfianza(autor.getTrustScore())
                 .estadoVerificacion(estadoInicial)
                 .expiraEn(OffsetDateTime.now().plusMinutes(45))
@@ -59,11 +64,11 @@ public class IncidenciaService {
     }
 
     @Transactional
-    public ReporteResponseDTO votarReporte(Long idReporte, VotarReporteRequest req) {
+    public ReporteResponseDTO votarReporte(Long idUsuario, Long idReporte, VotarReporteRequest req) {
         ReporteIncidencia reporte = reporteRepo.findById(idReporte)
                 .orElseThrow(() -> new IllegalArgumentException("Reporte no encontrado"));
 
-        Usuario votante = usuarioRepo.findById(req.idUsuario())
+        Usuario votante = usuarioRepo.findById(idUsuario)
                 .orElseThrow(() -> new IllegalArgumentException("Votante no encontrado"));
 
         if (reporte.getUsuario().getIdUsuario().equals(votante.getIdUsuario())) {
@@ -79,7 +84,6 @@ public class IncidenciaService {
                 .esVeridico(req.esVeridico())
                 .build());
 
-        // Ponderación del voto según el Trust Score del votante
         BigDecimal impacto = votante.getTrustScore();
         BigDecimal nuevoPeso = req.esVeridico()
                 ? reporte.getPesoConfianza().add(impacto)
@@ -87,7 +91,6 @@ public class IncidenciaService {
 
         reporte.setPesoConfianza(nuevoPeso);
 
-        // Evaluar cambio de estado y actualizar reputación del autor original
         Usuario autor = reporte.getUsuario();
         if ("PENDIENTE".equals(reporte.getEstadoVerificacion())) {
             if (nuevoPeso.compareTo(UMBRAL_CONFIRMACION) >= 0) {

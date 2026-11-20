@@ -115,3 +115,16 @@ CREATE TABLE IF NOT EXISTS log_analitica_operador (
     duracion_min INT NOT NULL DEFAULT 0,
     usuarios_afectados_est INT NOT NULL DEFAULT 0
     );
+
+
+CREATE TABLE IF NOT EXISTS refresh_token (
+                                             id_token        BIGSERIAL PRIMARY KEY,
+                                             id_usuario      BIGINT NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,
+                                             token_hash      VARCHAR(64) NOT NULL UNIQUE,
+                                             familia_token   VARCHAR(36) NOT NULL,
+                                             expira_en       TIMESTAMPTZ NOT NULL,
+                                             revocado        BOOLEAN NOT NULL DEFAULT FALSE,
+                                             creado_en       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_refresh_token_usuario ON refresh_token(id_usuario);
