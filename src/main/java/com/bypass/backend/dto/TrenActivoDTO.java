@@ -9,5 +9,7 @@ public record TrenActivoDTO(
         Integer numVagones,
         String estado,
         Integer minutosRetraso,
+        String fuenteDato,
+        Long antiguedadSegundos,
         OffsetDateTime ultimaActualizacion
 ) {}

@@ -110,6 +110,22 @@ public class AuthService {
             refreshTokenRepo.save(t);
         });
     }
+    @Transactional
+    public ResultadoSesion crearSesionAnonima() {
+        String sufijo = UUID.randomUUID().toString().substring(0, 8);
+        String emailTecnico = "anon_" + sufijo + "@bypass.local";
+
+        Usuario anonimo = Usuario.builder()
+                .nombre("Viajero_" + sufijo.toUpperCase())
+                .email(emailTecnico)
+                .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
+                .rol("VIAJERO")
+                .trustScore(new java.math.BigDecimal("0.50")) // Peso reducido hasta ganar reputación real
+                .build();
+
+        Usuario guardado = usuarioRepo.save(anonimo);
+        return emitirParTokens(guardado, UUID.randomUUID().toString());
+    }
 
     private ResultadoSesion emitirParTokens(Usuario usuario, String familia) {
         String accessToken = jwtService.generarAccessToken(usuario);

@@ -128,3 +128,12 @@ CREATE TABLE IF NOT EXISTS refresh_token (
 );
 
 CREATE INDEX IF NOT EXISTS idx_refresh_token_usuario ON refresh_token(id_usuario);
+
+ALTER TABLE estacion ADD COLUMN IF NOT EXISTS codigo_parada VARCHAR(20);
+ALTER TABLE estacion ADD COLUMN IF NOT EXISTS accesible_pmr BOOLEAN NOT NULL DEFAULT TRUE;
+CREATE INDEX IF NOT EXISTS idx_estacion_coords ON estacion(latitud, longitud);
+
+-- Permitir el estado SIN_DATOS en ocupacion_vagon
+ALTER TABLE ocupacion_vagon DROP CONSTRAINT IF EXISTS ocupacion_vagon_nivel_saturacion_check;
+ALTER TABLE ocupacion_vagon ADD CONSTRAINT ocupacion_vagon_nivel_saturacion_check
+    CHECK (nivel_saturacion IN ('SIN_DATOS', 'VACIO', 'MODERADO', 'LLENO', 'COLAPSADO'));

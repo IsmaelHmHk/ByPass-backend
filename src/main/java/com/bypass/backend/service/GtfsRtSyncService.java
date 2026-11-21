@@ -151,8 +151,8 @@ public class GtfsRtSyncService {
             vagonRepo.save(OcupacionVagon.builder()
                     .tren(tren)
                     .numeroVagon(i)
-                    .nivelSaturacion("MODERADO")
-                    .scorePonderado(new BigDecimal("45.00"))
+                    .nivelSaturacion("SIN_DATOS")
+                    .scorePonderado(BigDecimal.ZERO)
                     .build());
         }
     }

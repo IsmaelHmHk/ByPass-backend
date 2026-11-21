@@ -76,20 +76,28 @@ public class TrenController {
     }
     @GetMapping("/linea/{idLinea}")
     public ResponseEntity<?> listarTrenesPorLinea(@PathVariable String idLinea) {
+        java.time.OffsetDateTime ahora = java.time.OffsetDateTime.now();
         List<TrenActivoDTO> trenes = trenRepository.findByLineaIdLinea(idLinea).stream()
-                .map(t -> new TrenActivoDTO(
-                        t.getIdTren(),
-                        t.getLinea().getIdLinea(),
-                        t.getDestino(),
-                        t.getNumVagones(),
-                        t.getEstado(),
-                        t.getMinutosRetraso(),
-                        t.getUltimaActualizacion()
-                ))
+                .map(t -> {
+                    long segundos = t.getUltimaActualizacion() != null
+                            ? java.time.Duration.between(t.getUltimaActualizacion(), ahora).getSeconds()
+                            : 9999L;
+                    String fuente = segundos <= 120 ? "EN_VIVO_GTFS_RT" : "TEORICO_DEGRADADO";
+                    return new TrenActivoDTO(
+                            t.getIdTren(),
+                            t.getLinea().getIdLinea(),
+                            t.getDestino(),
+                            t.getNumVagones(),
+                            t.getEstado(),
+                            t.getMinutosRetraso(),
+                            fuente,
+                            Math.max(0, segundos),
+                            t.getUltimaActualizacion()
+                    );
+                })
                 .toList();
         return ResponseEntity.ok(trenes);
     }
-
     private BigDecimal calcularScoreBase(String nivel) {
         return switch (nivel) {
             case "VACIO" -> new BigDecimal("15.00");

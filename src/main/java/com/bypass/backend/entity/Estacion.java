@@ -32,6 +32,13 @@ public class Estacion {
     @Builder.Default
     private Boolean tieneEnlaceMetro = false;
 
+    @Column(name = "codigo_parada", length = 20)
+    private String codigoParada;
+
+    @Builder.Default
+    @Column(name = "accesible_pmr", nullable = false)
+    private Boolean accesiblePmr = true;
+
     @Column(name = "tiene_enlace_bus", nullable = false)
     @Builder.Default
     private Boolean tieneEnlaceBus = false;
