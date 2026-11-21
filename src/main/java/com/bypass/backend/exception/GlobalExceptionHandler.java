@@ -8,8 +8,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.OffsetDateTime;
 import java.util.Map;
@@ -19,8 +21,13 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<?> handleValidation(MethodArgumentNotValidException ex) {
+    @ExceptionHandler({
+            MethodArgumentNotValidException.class,
+            ConstraintViolationException.class,
+            MissingServletRequestParameterException.class,
+            MethodArgumentTypeMismatchException.class
+    })
+    public ResponseEntity<?> handleValidation(Exception ex) {
         return buildResponse(HttpStatus.BAD_REQUEST, "Los datos enviados no cumplen el formato requerido.");
     }
 
@@ -39,11 +46,6 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.FORBIDDEN, "No tienes permisos para realizar esta acción.");
     }
 
-    @ExceptionHandler({MethodArgumentNotValidException.class, ConstraintViolationException.class})
-    public ResponseEntity<?> handleValidation(Exception ex) {
-        return buildResponse(HttpStatus.BAD_REQUEST, "Los datos enviados no cumplen el formato requerido.");
-    }
-
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleUnexpected(Exception ex) {
         log.error("Error interno no controlado", ex);
@@ -58,6 +60,3 @@ public class GlobalExceptionHandler {
         ));
     }
 }
-
-
-
