@@ -62,7 +62,9 @@ public class SecurityConfig {
                     auth.requestMatchers(HttpMethod.GET,
                             "/api/v1/trenes/*/vagones",
                             "/api/v1/rutas/alternativas",
-                            "/api/v1/incidencias/linea/*"
+                            "/api/v1/incidencias/linea/*",
+                            "/api/v1/catalogo/**",
+                            "/api/v1/rutas/calcular"
                     ).permitAll();
                     if (swaggerEnabled) {
                         auth.requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll();

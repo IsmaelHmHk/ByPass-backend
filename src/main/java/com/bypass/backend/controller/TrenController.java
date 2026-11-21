@@ -1,6 +1,7 @@
 package com.bypass.backend.controller;
 
 import com.bypass.backend.dto.ReporteVagonRequest;
+import com.bypass.backend.dto.TrenActivoDTO;
 import com.bypass.backend.dto.VagonEstadoDTO;
 import com.bypass.backend.entity.OcupacionVagon;
 import com.bypass.backend.entity.Tren;
@@ -72,6 +73,21 @@ public class TrenController {
                 guardado.getScorePonderado(),
                 guardado.getActualizadoEn()
         ));
+    }
+    @GetMapping("/linea/{idLinea}")
+    public ResponseEntity<?> listarTrenesPorLinea(@PathVariable String idLinea) {
+        List<TrenActivoDTO> trenes = trenRepository.findByLineaIdLinea(idLinea).stream()
+                .map(t -> new TrenActivoDTO(
+                        t.getIdTren(),
+                        t.getLinea().getIdLinea(),
+                        t.getDestino(),
+                        t.getNumVagones(),
+                        t.getEstado(),
+                        t.getMinutosRetraso(),
+                        t.getUltimaActualizacion()
+                ))
+                .toList();
+        return ResponseEntity.ok(trenes);
     }
 
     private BigDecimal calcularScoreBase(String nivel) {

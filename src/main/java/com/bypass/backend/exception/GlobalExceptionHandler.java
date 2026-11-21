@@ -1,5 +1,6 @@
 package com.bypass.backend.exception;
 
+import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -36,6 +37,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<?> handleAccessDenied(AccessDeniedException ex) {
         return buildResponse(HttpStatus.FORBIDDEN, "No tienes permisos para realizar esta acción.");
+    }
+
+    @ExceptionHandler({MethodArgumentNotValidException.class, ConstraintViolationException.class})
+    public ResponseEntity<?> handleValidation(Exception ex) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "Los datos enviados no cumplen el formato requerido.");
     }
 
     @ExceptionHandler(Exception.class)

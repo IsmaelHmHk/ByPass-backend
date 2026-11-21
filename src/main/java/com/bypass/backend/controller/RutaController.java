@@ -1,9 +1,14 @@
 package com.bypass.backend.controller;
 
 import com.bypass.backend.dto.AlternativaRutaDTO;
+import com.bypass.backend.dto.RutaCalculadaDTO;
 import com.bypass.backend.repository.AlternativaRutaRepository;
+import com.bypass.backend.service.EnrutamientoService;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -11,14 +16,16 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/rutas")
 @RequiredArgsConstructor
+@Validated
 public class RutaController {
 
     private final AlternativaRutaRepository alternativaRepo;
+    private final EnrutamientoService enrutamientoService;
 
     @GetMapping("/alternativas")
-    public ResponseEntity<List<AlternativaRutaDTO>> buscarAlternativas(
-            @RequestParam String origen,
-            @RequestParam String destino) {
+    public ResponseEntity<?> buscarAlternativas(
+            @RequestParam @NotBlank @Pattern(regexp = "^[A-Za-z0-9_-]{2,32}$") String origen,
+            @RequestParam @NotBlank @Pattern(regexp = "^[A-Za-z0-9_-]{2,32}$") String destino) {
 
         List<AlternativaRutaDTO> resultados = alternativaRepo
                 .findByEstacionOrigenIdEstacionAndEstacionDestinoIdEstacionOrderByTiempoEstimadoMinAsc(origen, destino)
@@ -35,5 +42,12 @@ public class RutaController {
                 .toList();
 
         return ResponseEntity.ok(resultados);
+    }
+
+    @GetMapping("/calcular")
+    public ResponseEntity<?> calcularRutaDinamica(
+            @RequestParam @NotBlank @Pattern(regexp = "^[A-Za-z0-9_-]{2,32}$") String origen,
+            @RequestParam @NotBlank @Pattern(regexp = "^[A-Za-z0-9_-]{2,32}$") String destino) {
+        return ResponseEntity.ok(enrutamientoService.calcularMejorRuta(origen, destino));
     }
 }
