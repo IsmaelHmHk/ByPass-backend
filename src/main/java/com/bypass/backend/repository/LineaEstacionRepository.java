@@ -13,4 +13,6 @@ public interface LineaEstacionRepository extends JpaRepository<LineaEstacion, Li
 
     @Query("SELECT le FROM LineaEstacion le JOIN FETCH le.linea WHERE le.estacion.idEstacion = :idEstacion")
     List<LineaEstacion> findLineasPorEstacion(String idEstacion);
+
+    List<LineaEstacion> findByEstacionIdEstacion(String idEstacion);
 }

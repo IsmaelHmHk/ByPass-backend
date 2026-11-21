@@ -9,7 +9,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/catalogo")
@@ -63,5 +66,65 @@ public class CatalogoController {
                 ))
                 .toList();
         return ResponseEntity.ok(estaciones);
+    }
+
+    @GetMapping("/cercanas")
+    public ResponseEntity<?> obtenerParadasCercanas(
+            @RequestParam double lat,
+            @RequestParam double lon,
+            @RequestParam(defaultValue = "2000") double radioMetros) {
+
+        var cercanas = estacionRepo.findAll().stream()
+                .map(est -> {
+                    long dist = Math.round(calcularDistanciaMetros(
+                            lat, lon,
+                            est.getLatitud().doubleValue(),
+                            est.getLongitud().doubleValue()
+                    ));
+                    int minutosPie = (int) Math.max(1, Math.ceil(dist / 80.0));
+                    var lineas = lineaEstacionRepo.findByEstacionIdEstacion(est.getIdEstacion())
+                            .stream()
+                            .map(le -> le.getLinea().getCodigoCorto())
+                            .toList();
+
+                    // Próximas salidas (honesto: TEORICO hasta enlazar GTFS-RT por parada)
+                    var proximasSalidas = lineas.stream().limit(3).map(cod -> {
+                        Map<String, Object> salida = new LinkedHashMap<>();
+                        salida.put("linea", cod);
+                        salida.put("destino", est.getNombre());
+                        salida.put("minutos", cod.startsWith("C-") ? 6 : 4);
+                        salida.put("fuente", "TEORICO");
+                        return salida;
+                    }).toList();
+
+                    Map<String, Object> dto = new LinkedHashMap<>();
+                    dto.put("idEstacion", est.getIdEstacion());
+                    dto.put("codigoParada", est.getCodigoParada() != null ? est.getCodigoParada() : est.getIdEstacion());
+                    dto.put("nombre", est.getNombre());
+                    dto.put("latitud", est.getLatitud());
+                    dto.put("longitud", est.getLongitud());
+                    dto.put("accesiblePmr", est.getAccesiblePmr() != null ? est.getAccesiblePmr() : true);
+                    dto.put("distanciaMetros", dist);
+                    dto.put("minutosCaminando", minutosPie);
+                    dto.put("lineas", lineas);
+                    dto.put("proximasSalidas", proximasSalidas);
+                    return dto;
+                })
+                .filter(m -> (Long) m.get("distanciaMetros") <= radioMetros)
+                .sorted(Comparator.comparingLong(m -> (Long) m.get("distanciaMetros")))
+                .limit(3)
+                .toList();
+
+        return ResponseEntity.ok(cercanas);
+    }
+
+    private double calcularDistanciaMetros(double lat1, double lon1, double lat2, double lon2) {
+        final double R = 6371000.0;
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 }
