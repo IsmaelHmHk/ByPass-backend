@@ -26,7 +26,7 @@ public class ProximasSalidasService {
         int segundosAhora = horaLocal.toSecondOfDay();
 
         // Si estamos de madrugada (00:00 - 03:59), los trenes nocturnos del servicio anterior
-        // suelen figurar en GTFS con horas >= 24:00:00 (86400s+) del día operativo anterior.
+        // suelen figurar con horas >= 24:00:00 (86400s+) del día operativo anterior.
         LocalDate fechaServicio = horaLocal.getHour() < 4 ? hoy.minusDays(1) : hoy;
         int segundosConsulta = horaLocal.getHour() < 4 ? segundosAhora + 86400 : segundosAhora;
 
@@ -41,9 +41,7 @@ public class ProximasSalidasService {
             SELECT
                 l.id_linea,
                 l.codigo_corto,
-                COALESCE(NULLIF(t.trip_headsign, ''), l.nombre_largo) AS destino,
-                st.departure_time,
-                st.arrival_time,
+                COALESCE(NULLIF(t.headsign, ''), l.nombre_largo) AS destino,
                 st.departure_seconds,
                 st.arrival_seconds
             FROM gtfs_stop_time st
@@ -111,38 +109,37 @@ public class ProximasSalidasService {
 
     private Set<String> obtenerServiciosActivos(LocalDate fecha) {
         String diaColumna = switch (fecha.getDayOfWeek()) {
-            case MONDAY -> "monday";
-            case TUESDAY -> "tuesday";
-            case WEDNESDAY -> "wednesday";
-            case THURSDAY -> "thursday";
-            case FRIDAY -> "friday";
-            case SATURDAY -> "saturday";
-            case SUNDAY -> "sunday";
+            case MONDAY -> "lunes";
+            case TUESDAY -> "martes";
+            case WEDNESDAY -> "miercoles";
+            case THURSDAY -> "jueves";
+            case FRIDAY -> "viernes";
+            case SATURDAY -> "sabado";
+            case SUNDAY -> "domingo";
         };
 
         Set<String> activos = new LinkedHashSet<>();
 
-        // Soporta start_date / end_date guardados como YYYYMMDD (INTEGER/VARCHAR) o como DATE
         String sqlCalendar = """
             SELECT service_id
             FROM gtfs_service_calendar
-            WHERE %s = 1
-              AND CAST(REPLACE(CAST(start_date AS TEXT), '-', '') AS INTEGER) <= ?
-              AND CAST(REPLACE(CAST(end_date AS TEXT), '-', '') AS INTEGER) >= ?
+            WHERE %s = true
+              AND start_date <= ?
+              AND end_date >= ?
             """.formatted(diaColumna);
 
-        int fechaYyyyMmDd = fecha.getYear() * 10000 + fecha.getMonthValue() * 100 + fecha.getDayOfMonth();
-        jdbcTemplate.queryForList(sqlCalendar, String.class, fechaYyyyMmDd, fechaYyyyMmDd)
+        Date sqlDate = Date.valueOf(fecha);
+        jdbcTemplate.queryForList(sqlCalendar, String.class, sqlDate, sqlDate)
                 .forEach(activos::add);
 
         // Aplicar excepciones: 1 = servicio añadido, 2 = servicio eliminado
         String sqlExceptions = """
             SELECT service_id, exception_type
             FROM gtfs_service_exception
-            WHERE CAST(REPLACE(CAST(date AS TEXT), '-', '') AS INTEGER) = ?
+            WHERE fecha = ?
             """;
 
-        for (Map<String, Object> ex : jdbcTemplate.queryForList(sqlExceptions, fechaYyyyMmDd)) {
+        for (Map<String, Object> ex : jdbcTemplate.queryForList(sqlExceptions, sqlDate)) {
             Object rawServiceId = ex.get("service_id");
             Object rawTipo = ex.get("exception_type");
             if (rawServiceId == null || !(rawTipo instanceof Number numTipo)) {
@@ -184,21 +181,7 @@ public class ProximasSalidasService {
         Object arrSec = row.get("arrival_seconds");
         if (arrSec instanceof Number n) return n.intValue();
 
-        String horaTexto = row.get("departure_time") != null
-                ? String.valueOf(row.get("departure_time"))
-                : (row.get("arrival_time") != null ? String.valueOf(row.get("arrival_time")) : null);
-
-        if (horaTexto == null || horaTexto.isBlank()) return null;
-        return parsearHoraGtfsASegundos(horaTexto.trim());
-    }
-
-    public static int parsearHoraGtfsASegundos(String hhmmss) {
-        String[] partes = hhmmss.split(":");
-        if (partes.length < 2) throw new IllegalArgumentException("Hora GTFS inválida: " + hhmmss);
-        int horas = Integer.parseInt(partes[0]);
-        int minutos = Integer.parseInt(partes[1]);
-        int segundos = partes.length >= 3 ? Integer.parseInt(partes[2]) : 0;
-        return horas * 3600 + minutos * 60 + segundos;
+        return null;
     }
 
     private String formatearHoraGtfs(int segundosTotales) {
