@@ -1,9 +1,12 @@
 package com.bypass.backend.controller;
 
 import com.bypass.backend.dto.AlternativaRutaDTO;
-import com.bypass.backend.dto.RutaCalculadaDTO;
+import com.bypass.backend.dto.RutaBusquedaDTO;
+import com.bypass.backend.dto.RutaHabitualEstadoDTO.ConsultaRequest;
+import com.bypass.backend.dto.RutaHabitualEstadoDTO.EstadoResponse;
 import com.bypass.backend.repository.AlternativaRutaRepository;
 import com.bypass.backend.service.EnrutamientoService;
+import com.bypass.backend.service.PlanificadorService;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +24,7 @@ public class RutaController {
 
     private final AlternativaRutaRepository alternativaRepo;
     private final EnrutamientoService enrutamientoService;
+    private final PlanificadorService planificadorService;
 
     @GetMapping("/alternativas")
     public ResponseEntity<?> buscarAlternativas(
@@ -49,5 +53,18 @@ public class RutaController {
             @RequestParam @NotBlank @Pattern(regexp = "^[A-Za-z0-9_-]{2,32}$") String origen,
             @RequestParam @NotBlank @Pattern(regexp = "^[A-Za-z0-9_-]{2,32}$") String destino) {
         return ResponseEntity.ok(enrutamientoService.calcularMejorRuta(origen, destino));
+    }
+
+    @GetMapping("/buscar")
+    public RutaBusquedaDTO buscarRutas(
+            @RequestParam @NotBlank @Pattern(regexp = "^[A-Za-z0-9_-]{2,64}$") String origen,
+            @RequestParam @NotBlank @Pattern(regexp = "^[A-Za-z0-9_-]{2,64}$") String destino,
+            @RequestParam(defaultValue = "false") boolean soloPmr) {
+        return planificadorService.buscarRutas(origen, destino, soloPmr);
+    }
+
+    @PostMapping("/estado-habituales")
+    public List<EstadoResponse> obtenerEstadoHabituales(@RequestBody ConsultaRequest request) {
+        return planificadorService.evaluarRutasHabituales(request != null ? request.trayectos() : List.of());
     }
 }

@@ -19,8 +19,10 @@ public class AdminGtfsController {
     @PostMapping(value = "/importar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> importarZipGtfs(
             @RequestParam("file") MultipartFile file,
-            @RequestParam(defaultValue = "renfe_") String prefijo,
-            @RequestParam(defaultValue = "RENFE_CERCANIAS") String operador) throws Exception {
+            @RequestParam(defaultValue = "madrid_renfe_") String prefijo,
+            @RequestParam(defaultValue = "RENFE_CERCANIAS") String operador,
+            @RequestParam(defaultValue = "MADRID") String nucleo,
+            @RequestParam(defaultValue = "10") String filtroRoutePrefix) throws Exception {
 
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("error", "El archivo ZIP GTFS está vacío"));
@@ -29,7 +31,27 @@ public class AdminGtfsController {
         Map<String, Integer> resumen = importerService.importarStopsYRoutes(
                 file.getInputStream(),
                 prefijo,
-                operador
+                operador,
+                nucleo,
+                filtroRoutePrefix
+        );
+        return ResponseEntity.ok(resumen);
+    }
+
+    @PostMapping(value = "/horarios", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> importarHorariosGtfs(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(defaultValue = "madrid_renfe_") String prefijo,
+            @RequestParam(defaultValue = "10") String filtroRoutePrefix) throws Exception {
+
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "El archivo ZIP GTFS está vacío"));
+        }
+
+        Map<String, Integer> resumen = importerService.importarHorarios(
+                file.getInputStream(),
+                prefijo,
+                filtroRoutePrefix
         );
         return ResponseEntity.ok(resumen);
     }

@@ -58,6 +58,8 @@ public class SecurityConfig {
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers("/api/v1/catalogo/**",
+                            "/api/v1/rutas/**").permitAll();
                     auth.requestMatchers(HttpMethod.POST, "/api/v1/auth/**").permitAll();
                     auth.requestMatchers(HttpMethod.GET,
                             "/api/v1/trenes/*/vagones",
@@ -67,7 +69,12 @@ public class SecurityConfig {
                             "/api/v1/rutas/calcular"
                     ).permitAll();
                     if (swaggerEnabled) {
-                        auth.requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll();
+                        auth.requestMatchers(
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**",
+                                "/api/v1/admin/**"
+                        ).permitAll();
                     }
                     auth.anyRequest().authenticated();
                 });

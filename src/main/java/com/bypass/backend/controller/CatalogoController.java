@@ -1,10 +1,13 @@
 package com.bypass.backend.controller;
 
+import com.bypass.backend.dto.EstacionDetalleDTO;
 import com.bypass.backend.dto.EstacionParadaDTO;
 import com.bypass.backend.dto.LineaDTO;
 import com.bypass.backend.repository.EstacionRepository;
 import com.bypass.backend.repository.LineaEstacionRepository;
 import com.bypass.backend.repository.LineaRepository;
+import com.bypass.backend.service.EstacionDetalleService;
+import com.bypass.backend.service.ProximasSalidasService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,9 +22,11 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class CatalogoController {
 
+    private final EstacionDetalleService estacionDetalleService;
     private final LineaRepository lineaRepo;
     private final EstacionRepository estacionRepo;
     private final LineaEstacionRepository lineaEstacionRepo;
+    private final ProximasSalidasService proximasSalidasService;
 
     @GetMapping("/lineas")
     public ResponseEntity<List<LineaDTO>> listarLineas() {
@@ -67,6 +72,10 @@ public class CatalogoController {
                 .toList();
         return ResponseEntity.ok(estaciones);
     }
+    @GetMapping("/estaciones/{idEstacion}/detalle")
+    public EstacionDetalleDTO obtenerDetalleEstacion(@PathVariable String idEstacion) {
+        return estacionDetalleService.obtenerDetalle(idEstacion);
+    }
 
     @GetMapping("/cercanas")
     public ResponseEntity<?> obtenerParadasCercanas(
@@ -85,17 +94,10 @@ public class CatalogoController {
                     var lineas = lineaEstacionRepo.findByEstacionIdEstacion(est.getIdEstacion())
                             .stream()
                             .map(le -> le.getLinea().getCodigoCorto())
+                            .distinct()
                             .toList();
 
-                    // Próximas salidas (honesto: TEORICO hasta enlazar GTFS-RT por parada)
-                    var proximasSalidas = lineas.stream().limit(3).map(cod -> {
-                        Map<String, Object> salida = new LinkedHashMap<>();
-                        salida.put("linea", cod);
-                        salida.put("destino", est.getNombre());
-                        salida.put("minutos", cod.startsWith("C-") ? 6 : 4);
-                        salida.put("fuente", "TEORICO");
-                        return salida;
-                    }).toList();
+                    var proximasSalidas = proximasSalidasService.obtenerProximasSalidas(est.getIdEstacion(), 3);
 
                     Map<String, Object> dto = new LinkedHashMap<>();
                     dto.put("idEstacion", est.getIdEstacion());
@@ -112,11 +114,12 @@ public class CatalogoController {
                 })
                 .filter(m -> (Long) m.get("distanciaMetros") <= radioMetros)
                 .sorted(Comparator.comparingLong(m -> (Long) m.get("distanciaMetros")))
-                .limit(3)
+                .limit(5)
                 .toList();
 
         return ResponseEntity.ok(cercanas);
     }
+
 
     private double calcularDistanciaMetros(double lat1, double lon1, double lat2, double lon2) {
         final double R = 6371000.0;

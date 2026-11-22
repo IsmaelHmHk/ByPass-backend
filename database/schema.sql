@@ -228,3 +228,21 @@ INSERT INTO alternativa_ruta (id_estacion_origen, id_estacion_destino, modo_tran
                                                                                                                                                    ('EST_VILLAVERDE_ALTO', 'EST_SOL', 'METRO', 'Línea 3 (Amarilla)', 21, 'Alternativa directa sin transbordos desde Villaverde Alto hasta Sol evitando cortes en C-4/C-5.'),
                                                                                                                                                    ('EST_ATOCHA', 'EST_NUEVOS_MIN', 'AUTOBUS_EMT', 'EMT 27 (Poste 1166)', 22, 'Sal por Paseo del Prado (Poste 1166) y toma el 27 directo por Castellana hasta Nuevos Ministerios.'),
                                                                                                                                                    ('EST_VILLAVERDE_ALTO', 'EST_ATOCHA', 'INTERURBANO', 'Interurbano 432 + Metro L3', 28, 'Desde Villaverde Cruce (Poste 16732) enlaza con L3 en Villaverde Alto o Legazpi.');
+
+
+CREATE TABLE intercambiador_enlace (
+>>     id_enlace           SERIAL PRIMARY KEY,
+>>     id_estacion_origen  VARCHAR(100) NOT NULL REFERENCES estacion(id_estacion),
+>>     id_estacion_destino VARCHAR(100) NOT NULL REFERENCES estacion(id_estacion),
+>>     minutos_caminando   INT NOT NULL,
+>>     accesible_pmr       BOOLEAN NOT NULL DEFAULT FALSE,
+>>     descripcion_paso    VARCHAR(255) -- Ej: "Pasillo subterráneo vestíbulo Renfe - Metro"
+>> );
+id_estacion : The term 'id_estacion' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try
+again.
+At line:3 char:67
++ ... acion_origen  VARCHAR(100) NOT NULL REFERENCES estacion(id_estacion),
++                                                             ~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (id_estacion:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+
