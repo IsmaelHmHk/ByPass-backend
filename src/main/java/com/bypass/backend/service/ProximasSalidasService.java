@@ -122,40 +122,43 @@ public class ProximasSalidasService {
 
         Set<String> activos = new LinkedHashSet<>();
 
+        // Soporta start_date / end_date guardados como YYYYMMDD (INTEGER/VARCHAR) o como DATE
         String sqlCalendar = """
-    
-                SELECT service_id
-    FROM gtfs_service_calendar
-    WHERE %s = 1
-      AND start_date <= ?
-      AND end_date >= ?
-    """.formatted(diaColumna);
+            SELECT service_id
+            FROM gtfs_service_calendar
+            WHERE %s = 1
+              AND CAST(REPLACE(CAST(start_date AS TEXT), '-', '') AS INTEGER) <= ?
+              AND CAST(REPLACE(CAST(end_date AS TEXT), '-', '') AS INTEGER) >= ?
+            """.formatted(diaColumna);
 
-        Date sqlDate = Date.valueOf(fecha);
-        jdbcTemplate.queryForList(sqlCalendar, String.class, sqlDate, sqlDate)
+        int fechaYyyyMmDd = fecha.getYear() * 10000 + fecha.getMonthValue() * 100 + fecha.getDayOfMonth();
+        jdbcTemplate.queryForList(sqlCalendar, String.class, fechaYyyyMmDd, fechaYyyyMmDd)
                 .forEach(activos::add);
 
-// Aplicar excepciones: 1 = servicio añadido, 2 = servicio eliminado
-        String sqlExceptions =
-                """
-    SELECT service_id,
-                exception_type
-    FROM
-                gtfs_service_exception
-                    WHERE date = ?
-    """;
+        // Aplicar excepciones: 1 = servicio añadido, 2 = servicio eliminado
+        String sqlExceptions = """
+            SELECT service_id, exception_type
+            FROM gtfs_service_exception
+            WHERE CAST(REPLACE(CAST(date AS TEXT), '-', '') AS INTEGER) = ?
+            """;
 
-        for (Map<String, Object> ex : jdbcTemplate.queryForList(sqlExceptions, sqlDate)) {
-            String serviceId = String.valueOf(ex.get("service_id"));
-            int tipoExcepcion = ((Number) ex.get("exception_type")).intValue();
+        for (Map<String, Object> ex : jdbcTemplate.queryForList(sqlExceptions, fechaYyyyMmDd)) {
+            Object rawServiceId = ex.get("service_id");
+            Object rawTipo = ex.get("exception_type");
+            if (rawServiceId == null || !(rawTipo instanceof Number numTipo)) {
+                continue;
+            }
+            String serviceId = String.valueOf(rawServiceId);
+            int tipoExcepcion = numTipo.intValue();
             if (tipoExcepcion == 1) {
                 activos.add(serviceId);
             } else if (tipoExcepcion == 2) {
                 activos.remove(serviceId);
             }
         }
-    return activos;
-}
+
+        return activos;
+    }
 
     private Map<String, Integer> obtenerRetrasosEnVivoPorLinea() {
         String sql = """
