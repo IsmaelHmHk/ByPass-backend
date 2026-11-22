@@ -123,23 +123,27 @@ public class ProximasSalidasService {
         Set<String> activos = new LinkedHashSet<>();
 
         String sqlCalendar = """
-            SELECT service_id
-            FROM gtfs_calendar
-            WHERE %s = 1
-              AND start_date <= ?
-              AND end_date >= ?
-            """.formatted(diaColumna);
+    
+                SELECT service_id
+    FROM gtfs_service_calendar
+    WHERE %s = 1
+      AND start_date <= ?
+      AND end_date >= ?
+    """.formatted(diaColumna);
 
         Date sqlDate = Date.valueOf(fecha);
         jdbcTemplate.queryForList(sqlCalendar, String.class, sqlDate, sqlDate)
                 .forEach(activos::add);
 
-        // Aplicar excepciones de calendar_dates: 1 = servicio añadido, 2 = servicio eliminado
-        String sqlExceptions = """
-            SELECT service_id, exception_type
-            FROM gtfs_calendar_dates
-            WHERE date = ?
-            """;
+// Aplicar excepciones: 1 = servicio añadido, 2 = servicio eliminado
+        String sqlExceptions =
+                """
+    SELECT service_id,
+                exception_type
+    FROM
+                gtfs_service_exception
+                    WHERE date = ?
+    """;
 
         for (Map<String, Object> ex : jdbcTemplate.queryForList(sqlExceptions, sqlDate)) {
             String serviceId = String.valueOf(ex.get("service_id"));
@@ -150,9 +154,8 @@ public class ProximasSalidasService {
                 activos.remove(serviceId);
             }
         }
-
-        return activos;
-    }
+    return activos;
+}
 
     private Map<String, Integer> obtenerRetrasosEnVivoPorLinea() {
         String sql = """
